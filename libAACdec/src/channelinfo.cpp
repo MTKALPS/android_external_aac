@@ -269,8 +269,8 @@ AAC_DECODER_ERROR getSamplingRateInfo(
     return AAC_DEC_UNSUPPORTED_FORMAT;
   }
 
-  FDK_ASSERT(t->ScaleFactorBands_Long[t->NumberOfScaleFactorBands_Long] == samplesPerFrame);
-  FDK_ASSERT(t->ScaleFactorBands_Short == NULL || t->ScaleFactorBands_Short[t->NumberOfScaleFactorBands_Short]*8 == samplesPerFrame);
+  FDK_ASSERT((UINT)(t->ScaleFactorBands_Long[t->NumberOfScaleFactorBands_Long]) == samplesPerFrame);
+  FDK_ASSERT(t->ScaleFactorBands_Short == NULL || (UINT)(t->ScaleFactorBands_Short[t->NumberOfScaleFactorBands_Short]*8) == samplesPerFrame);
 
   return AAC_DEC_OK;
 }

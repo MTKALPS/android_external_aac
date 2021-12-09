@@ -106,6 +106,9 @@ typedef struct
   UCHAR *Buffer;
   UINT   bufSize;
   UINT   bufBits;
+#ifdef MTK_AOSP_ENHANCEMENT
+  UINT  usedBits;
+#endif
 } FDK_BITBUF;
 
 typedef FDK_BITBUF *HANDLE_FDK_BITBUF;

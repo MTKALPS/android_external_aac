@@ -271,6 +271,10 @@ AAC_DECODER_ERROR CChannelElement_Read(HANDLE_FDK_BITSTREAM hBs,
   ch = 0;
   decision_bit = 0;
   do {
+#if defined(MTK_AOSP_ENHANCEMENT) && defined(DBGOUT_LSI_DPRINTF)
+    LSIdebug_display_channel_element_usedBtis(list->id[i], hBs->hBitBuf.usedBits);
+#endif
+
     switch (list->id[i]) {
     case element_instance_tag:
       pAacDecoderChannelInfo[0]->ElementInstanceTag = FDKreadBits(hBs, 4);

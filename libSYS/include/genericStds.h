@@ -394,6 +394,7 @@ float FDKatof(const char *nptr);
  *
  * \return  1 if platform is little endian, non-1 if platform is big endian.
  */
+#ifndef MTK_BT_COMMON
 #ifdef __cplusplus
 inline
 #else
@@ -414,7 +415,7 @@ int IS_LITTLE_ENDIAN(void) {
   ( (IS_LITTLE_ENDIAN()) ? \
      (val) \
    : ( (((val) & 0xff) << 24) || (((val) & 0xff00)<< 8) || (((val) & 0xff0000)>>8) || (((val) & 0xff000000) >> 24) ) )
-
+#endif
 
 /*!
  * \fn     FDKFILE *FDKfopen(const char *filename, const char *mode);

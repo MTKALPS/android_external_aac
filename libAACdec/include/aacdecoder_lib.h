@@ -692,6 +692,10 @@ aacDecoder_ConfigRaw ( HANDLE_AACDECODER self,
  *                    The value is updated according to the amount of newly copied bytes.
  * \return            Error code.
  */
+#ifdef MTK_AOSP_ENHANCEMENT
+#define AACDEC_BYPASS   (1 << 31)/*!< Flag for aacDecoder_DecodeFrame(): Bypass signal processing, used for seek time table buildup */
+#endif
+
 LINKSPEC_H AAC_DECODER_ERROR
 aacDecoder_Fill ( HANDLE_AACDECODER  self,
                   UCHAR             *pBuffer[],
@@ -733,6 +737,7 @@ aacDecoder_DecodeFrame ( HANDLE_AACDECODER  self,
  */
 LINKSPEC_H void aacDecoder_Close ( HANDLE_AACDECODER self );
 
+LINKSPEC_H void aacDecoder_Reset ( HANDLE_AACDECODER self );
 /**
  * \brief       Get CStreamInfo handle from decoder.
  *

@@ -2,7 +2,7 @@
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
-© Copyright  1995 - 2013 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
+?Copyright  1995 - 2013 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
   All rights reserved.
 
  1.    INTRODUCTION
@@ -173,6 +173,7 @@ amm-info@iis.fraunhofer.de
 
 
 /* Define 64 bit base integer type. */
+#ifndef MTK_BT_COMMON
 #ifdef _MSC_VER
   typedef __int64 INT64;
   typedef unsigned __int64 UINT64;
@@ -180,7 +181,7 @@ amm-info@iis.fraunhofer.de
   typedef long long INT64;
   typedef unsigned long long UINT64;
 #endif
-
+#endif
 #ifndef NULL
   #ifdef __cplusplus
     #define NULL    0
@@ -353,5 +354,7 @@ amm-info@iis.fraunhofer.de
    */
   #pragma warning( disable : 4065 )
 #endif
-
+#ifdef DBGOUT_LSI_DPRINTF
+#include "aacdec_debug.h"
+#endif
 #endif /* __MACHINE_TYPE_H__ */

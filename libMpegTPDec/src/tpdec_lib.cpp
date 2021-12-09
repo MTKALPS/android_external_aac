@@ -201,10 +201,13 @@ HANDLE_TRANSPORTDEC transportDec_Open( const TRANSPORT_TYPE transportFmt, const 
   }
 
   if (hInput != NULL) {
+  #ifndef FEED_RAW_BUFFER_TO_INTERNAL
     /* Create bitstream */
     if ( TT_IS_PACKET(transportFmt) ) {
       hInput->bsBuffer = NULL;
-    } else {
+    } else
+#endif
+	{
       hInput->bsBuffer = GetRam_TransportDecoderBuffer(0);
       if (hInput->bsBuffer == NULL) {
           transportDec_Close( &hInput );
@@ -330,7 +333,7 @@ TRANSPORTDEC_ERROR transportDec_FillData(
 
   /* set bitbuffer shortcut */
   hBs = &hTp->bitStream[layer];
-
+#ifndef FEED_RAW_BUFFER_TO_INTERNAL
   if ( TT_IS_PACKET(hTp->transportFmt) ) {
     if (hTp->numberOfRawDataBlocks == 0) {
     /* For packet based transport, pass input buffer to bitbuffer without copying the data.
@@ -340,7 +343,9 @@ TRANSPORTDEC_ERROR transportDec_FillData(
     FDKinitBitStream(hBs, pBuffer, 0x10000, (*pBytesValid)<<3, BS_READER);
     *pBytesValid = 0;
     }
-  } else {
+  } else
+#endif
+  {
     /* ... else feed bitbuffer with new stream data (append). */
     if (hTp->numberOfRawDataBlocks <= 0) {
       FDKfeedBuffer (hBs, pBuffer, bufferSize, pBytesValid) ;
@@ -1100,11 +1105,18 @@ TRANSPORTDEC_ERROR transportDec_ReadAccessUnit( const HANDLE_TRANSPORTDEC hTp, c
       break;
 
     case TT_MP4_RAW:
+// Current OMX design, the buffer unit isn't One Access Unit, so we set length = -1 to
+// skip au length check in CAacDecoder_DecodeFrame()
+#ifdef MTK_AOSP_ENHANCEMENT
+      hTp->auLength[layer] = -1;
+#else
+
+	  /* One Access Unit was filled into buffer.
     case TT_DRM:
-      /* One Access Unit was filled into buffer.
          So get the length out of the buffer. */
       hTp->auLength[layer] = FDKgetValidBits(hBs);
-      hTp->flags |= TPDEC_SYNCOK;
+#endif
+	  hTp->flags |= TPDEC_SYNCOK;
       break;
 
     case TT_MP4_LATM_MCP0:

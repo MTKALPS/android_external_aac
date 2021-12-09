@@ -169,7 +169,9 @@ void CAacDecoder_SyncQmfMode(HANDLE_AACDECODER self)
   if ( self->qmfModeCurr == NOT_DEFINED )
   {
     if ( (IS_LOWDELAY(self->streamInfo.aot) && (self->flags & AC_MPS_PRESENT))
-      || ( (self->streamInfo.aacNumChannels == 1)
+
+        || ( (self->streamInfo.aacNumChannels == 1)
+
         && ( (CAN_DO_PS(self->streamInfo.aot) && !(self->flags & AC_MPS_PRESENT))
           || (  IS_USAC(self->streamInfo.aot) &&  (self->flags & AC_MPS_PRESENT)) ) ) )
     {
@@ -182,7 +184,9 @@ void CAacDecoder_SyncQmfMode(HANDLE_AACDECODER self)
 
   /* Set SBR to current QMF mode. Error does not matter. */
   sbrDecoder_SetParam(self->hSbrDecoder, SBR_QMF_MODE, (self->qmfModeCurr == MODE_LP));
+
   self->psPossible = ((CAN_DO_PS(self->streamInfo.aot) && self->streamInfo.aacNumChannels == 1 && ! (self->flags & AC_MPS_PRESENT))) && self->qmfModeCurr == MODE_HQ ;
+
   FDK_ASSERT( ! ( (self->flags & AC_MPS_PRESENT) && self->psPossible ) );
 }
 
@@ -513,6 +517,17 @@ AAC_DECODER_ERROR CAacDecoder_ExtPayloadParse (HANDLE_AACDECODER self,
   case EXT_SBR_DATA_CRC:
     crcFlag = 1;
   case EXT_SBR_DATA:
+
+// for error recovery, AC-LD should not have EXT_SBR extension data.
+#ifdef MTK_AOSP_ENHANCEMENT
+    if (self->flags & AC_LD)
+    {
+        *count = 0;
+        FDKresetBitbuffer(hBs);
+        return AAC_DEC_OK;
+    }
+#endif
+
     if (IS_CHANNEL_ELEMENT(previous_element)) {
       SBR_ERROR sbrError;
 
@@ -579,7 +594,21 @@ AAC_DECODER_ERROR CAacDecoder_ExtPayloadParse (HANDLE_AACDECODER self,
         temp = FDKreadBits(hBs,8);
         bytes--;
         if (temp != 0xa5) {
-          error = AAC_DEC_PARSE_ERROR;
+
+
+#ifdef MTK_AOSP_ENHANCEMENT
+        if (self->flags & AC_LD)
+        {
+            bytes = 0;
+            FDKpushBack(hBs, 8);
+        }
+        else
+        {
+            error = AAC_DEC_PARSE_ERROR;
+        }
+#else
+        error = AAC_DEC_PARSE_ERROR;
+#endif
           break;
         }
       }
@@ -658,9 +687,25 @@ AAC_DECODER_ERROR CAacDecoder_ExtPayloadParse (HANDLE_AACDECODER self,
   case EXT_FIL:
 
   default:
+
+//  clear bitbuffer for next frame raw data packet decode
+#ifdef MTK_AOSP_ENHANCEMENT
+    if (self->flags & AC_LD)
+    {
+        *count = 0;
+        FDKresetBitbuffer(hBs);
+    }
+    else
+    {
+        /* align = 4 */
+        FDKpushFor(hBs, *count);
+        *count = 0;
+    }
+#else
     /* align = 4 */
     FDKpushFor(hBs, *count);
     *count = 0;
+#endif
     break;
   }
 
@@ -812,6 +857,36 @@ LINKSPEC_CPP void CAacDecoder_Close(HANDLE_AACDECODER self)
 
   FreeAacDecoder ( &self);
 }
+
+LINKSPEC_CPP void CAacDecoder_Reset(HANDLE_AACDECODER self)
+{
+  int ch;
+
+  if (self == NULL)
+    return;
+
+#ifdef MTK_AOSP_ENHANCEMENT
+	self->seekDrop = 1;
+#endif
+
+  for (ch=0; ch<(self->aacChannels); ch++)
+  {
+    mdct_init( &self->pAacDecoderStaticChannelInfo[ch]->IMdct,
+            self->pAacDecoderStaticChannelInfo[ch]->pOverlapBuffer,
+            OverlapBufferSize );
+
+
+    /* Reset DRC control data for this channel */
+    aacDecoder_drcInitChannelData ( &self->pAacDecoderStaticChannelInfo[ch]->drcData );
+
+    /* Reset concealment only if ASC changed. Otherwise it will be done with any config callback.
+    E.g. every time the LATM SMC is present. */
+    CConcealment_InitChannelData(&self->pAacDecoderStaticChannelInfo[ch]->concealmentInfo,
+                                    &self->concealCommonData,
+                                     self->streamInfo.aacSamplesPerFrame );
+  }
+}
+
 
 
 /*!
@@ -1135,7 +1210,11 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
   /* Any supported base layer valid AU will require more than 16 bits. */
   if ( (transportDec_GetAuBitsRemaining(self->hInput, 0) < 15) && (flags & (AACDEC_CONCEAL|AACDEC_FLUSH)) == 0) {
     self->frameOK = 0;
+#ifdef MTK_AOSP_ENHANCEMENT
+    return (AAC_DEC_NOT_ENOUGH_BITS);
+#else
     ErrorStatus = AAC_DEC_DECODE_FRAME_ERROR;
+#endif
   }
 
 
@@ -1200,6 +1279,9 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
      }
   }
 
+#if defined(MTK_AOSP_ENHANCEMENT) && defined(DBGOUT_LSI_DPRINTF)
+ LSIdebug_display_bitstream((void **)&bs);
+#endif
 
 
 #ifdef TP_PCE_ENABLE
@@ -1213,18 +1295,24 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
   int element_count = 0;                    /* Element counter for elements found in the bitstream */
   int el_cnt[ID_LAST] = { 0 };              /* element counter ( robustness ) */
 
+#ifdef MTK_AOSP_ENHANCEMENT
+  bs->hBitBuf.usedBits = 0;
+#endif
+
   while ( (type != ID_END) && (! (flags & (AACDEC_CONCEAL | AACDEC_FLUSH))) && self->frameOK )
   {
     int el_channels;
 
     if (! (self->flags & (AC_USAC|AC_RSVD50|AC_ELD|AC_SCALABLE|AC_ER)))
       type = (MP4_ELEMENT_ID) FDKreadBits(bs,3);
-    else 
+    else
       type = self->elements[element_count];
 
     setHcrType(&self->aacCommonData.overlay.aac.erHcrInfo, type);
 
-
+#if defined(MTK_AOSP_ENHANCEMENT) && defined(DBGOUT_LSI_DPRINTF)
+    LSIdebug_display_id_syn_ele(type, (void **)&bs);
+#endif
     if ((INT)FDKgetValidBits(bs) < 0)
       self->frameOK = 0;
 
@@ -1290,6 +1378,10 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
                   type) )
           {
             if ( !hdaacDecoded ) {
+          #ifdef MTK_AOSP_ENHANCEMENT
+               if (!(flags & AACDEC_BYPASS))
+          #endif
+               {
               CChannelElement_Decode(
                      &self->pAacDecoderChannelInfo[aacChannels],
                      &self->pAacDecoderStaticChannelInfo[aacChannels],
@@ -1297,6 +1389,7 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
                       self->flags,
                       el_channels
                       );
+                }
             }
             aacChannels += 1;
             if (type == ID_CPE) {
@@ -1306,6 +1399,11 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
           else {
             self->frameOK = 0;
           }
+
+      #ifdef MTK_AOSP_ENHANCEMENT
+          if (!(flags & AACDEC_BYPASS))
+      #endif
+          {
           /* Create SBR element for SBR for upsampling for LFE elements,
              and if SBR was explicitly signaled, because the first frame(s)
              may not contain SBR payload (broken encoder, bit errors). */
@@ -1328,7 +1426,7 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
             }
           }
         }
-
+}
         el_cnt[type]++;
         break;
 
@@ -1574,17 +1672,20 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
     {
       FDKbyteAlign(bs, auStartAnchor);
     }
-
+ /* 20120807 PC : 01._?X(pk¨©)_44100_C5.1.aac (ADTS) @ frame 73
+                     The consumed bit length is smaller than frame lenth, but decode ok
+                     For better error recovery, do not return error */
     /* Check if all bits of the raw_data_block() have been read. */
     if ( transportDec_GetAuBitsTotal(self->hInput, 0) > 0 ) {
       INT unreadBits = transportDec_GetAuBitsRemaining(self->hInput, 0);
       if ( unreadBits != 0 ) {
-
+#ifndef MTK_AOSP_ENHANCEMENT
         self->frameOK = 0;
         /* Do not overwrite current error */
         if (ErrorStatus == AAC_DEC_OK && self->frameOK == 0) {
           ErrorStatus = AAC_DEC_PARSE_ERROR;
         }
+#endif
         /* Always put the bitbuffer at the right position after the current Access Unit. */
         FDKpushBiDirectional(bs, unreadBits);
       }
@@ -1678,6 +1779,10 @@ LINKSPEC_CPP AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
   /*
     Inverse transform
   */
+
+ #ifdef MTK_AOSP_ENHANCEMENT
+  if (!(flags & AACDEC_BYPASS))
+ #endif
   {
     int stride, offset, c;
 
