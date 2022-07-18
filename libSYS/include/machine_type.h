@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -353,5 +352,7 @@ amm-info@iis.fraunhofer.de
    */
   #pragma warning( disable : 4065 )
 #endif
-
+#ifdef DBGOUT_LSI_DPRINTF
+#include "aacdec_debug.h"
+#endif
 #endif /* __MACHINE_TYPE_H__ */

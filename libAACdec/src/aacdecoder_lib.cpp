@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -110,7 +109,8 @@ amm-info@iis.fraunhofer.de
 /* Decoder library info */
 #define AACDECODER_LIB_VL0 2
 #define AACDECODER_LIB_VL1 5
-#define AACDECODER_LIB_VL2 10
+#define AACDECODER_LIB_VL2 5
+#define AACDECODER_LIB_VL3 4
 #define AACDECODER_LIB_TITLE "AAC Decoder Lib"
 #define AACDECODER_LIB_BUILD_DATE __DATE__
 #define AACDECODER_LIB_BUILD_TIME __TIME__
@@ -707,7 +707,7 @@ LINKSPEC_CPP AAC_DECODER_ERROR aacDecoder_Fill(
         )
 {
   TRANSPORTDEC_ERROR tpErr;
-  /* loop counter for layers; if not TT_MP4_RAWPACKETS used as index for only 
+  /* loop counter for layers; if not TT_MP4_RAWPACKETS used as index for only
      available layer                                                           */
   INT layer      = 0;
   INT nrOfLayers = self->nrOfLayers;
@@ -743,7 +743,7 @@ static void aacDecoder_UpdateBitStreamCounters(CStreamInfo *pSi, HANDLE_FDK_BITS
 
   /* Note: The amount of bits consumed might become negative when parsing a
      bit stream with several sub frames, and we find out at the last sub frame
-     that the total frame length does not match the sum of sub frame length. 
+     that the total frame length does not match the sum of sub frame length.
      If this happens, the transport decoder might want to rewind to the supposed
      ending of the transport frame, and this position might be before the last
      access unit beginning. */
@@ -905,11 +905,26 @@ LINKSPEC_CPP AAC_DECODER_ERROR aacDecoder_DecodeFrame(
 
 /* sbr decoder */
 
-    if (ErrorStatus || (flags & AACDEC_CONCEAL) || self->pAacDecoderStaticChannelInfo[0]->concealmentInfo.concealState > ConcealState_FadeIn)
+    if (ErrorStatus ||
+
+#ifdef MTK_AOSP_ENHANCEMENT
+ 		(self->seekDrop) ||
+#endif
+
+	(flags & AACDEC_CONCEAL) || self->pAacDecoderStaticChannelInfo[0]->concealmentInfo.concealState > ConcealState_FadeIn)
     {
       self->frameOK = 0;  /* if an error has occured do concealment in the SBR decoder too */
-    }
 
+#ifdef MTK_AOSP_ENHANCEMENT
+	  self->seekDrop = 0;
+#endif
+
+}
+
+ #ifdef MTK_AOSP_ENHANCEMENT
+    if (!(flags & AACDEC_BYPASS))
+ #endif
+    {
     if (self->sbrEnabled)
     {
       SBR_ERROR sbrError = SBRDEC_OK;
@@ -989,6 +1004,20 @@ LINKSPEC_CPP AAC_DECODER_ERROR aacDecoder_DecodeFrame(
       /* delete data from the past (e.g. mixdown coeficients) */
       pcmDmx_Reset( self->hPcmUtils, PCMDMX_RESET_BS_DATA );
     }
+#ifdef MTK_AOSP_ENHANCEMENT
+        // for dual SCE with channel configuration = 0 and non PCE
+        if ((0 == self->streamInfo.channelConfig) &&
+            (2 == self->streamInfo.numChannels) &&
+            (ID_SCE == self->elements[0]) &&
+            (ID_SCE == self->elements[1]))
+        {
+             self->channelType[0] = ACT_FRONT;
+             self->channelType[1] = ACT_FRONT;
+             self->channelIndices[0] = 0;
+             self->channelIndices[1] = 1;
+        }
+#endif
+
     /* do PCM post processing */
     dmxErr = pcmDmx_ApplyFrame (
             self->hPcmUtils,
@@ -1037,7 +1066,7 @@ LINKSPEC_CPP AAC_DECODER_ERROR aacDecoder_DecodeFrame(
     if ( flags & AACDEC_FLUSH ) {
       aacDecoder_SignalInterruption(self);
     }
-
+ 	}
     /* Update externally visible copy of flags */
     self->streamInfo.flags = self->flags;
 
@@ -1076,6 +1105,13 @@ LINKSPEC_CPP void aacDecoder_Close ( HANDLE_AACDECODER self )
   CAacDecoder_Close(self);
 }
 
+LINKSPEC_CPP void aacDecoder_Reset ( HANDLE_AACDECODER self )
+{
+  if (self == NULL)
+    return;
+
+  CAacDecoder_Reset(self);
+}
 
 LINKSPEC_CPP CStreamInfo* aacDecoder_GetStreamInfo ( HANDLE_AACDECODER self )
 {
@@ -1089,7 +1125,7 @@ LINKSPEC_CPP INT aacDecoder_GetLibInfo ( LIB_INFO *info )
   if (info == NULL) {
     return -1;
   }
-
+#ifndef MTK_AOSP_ENHANCEMENT
   sbrDecoder_GetLibInfo( info );
   transportDec_GetLibInfo( info );
   FDK_toolsGetLibInfo( info );
@@ -1103,10 +1139,10 @@ LINKSPEC_CPP INT aacDecoder_GetLibInfo ( LIB_INFO *info )
     return -1;
   }
   info += i;
-
+#endif
   info->module_id = FDK_AACDEC;
   /* build own library info */
-  info->version = LIB_VERSION(AACDECODER_LIB_VL0, AACDECODER_LIB_VL1, AACDECODER_LIB_VL2);
+   info->version = LIB_VERSION4(AACDECODER_LIB_VL0, AACDECODER_LIB_VL1, AACDECODER_LIB_VL2, AACDECODER_LIB_VL3);
   LIB_VERSION_STRING(info);
   info->build_date = AACDECODER_LIB_BUILD_DATE;
   info->build_time = AACDECODER_LIB_BUILD_TIME;

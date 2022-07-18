@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -275,7 +274,7 @@ TRANSPORTDEC_ERROR CLatmDemux_ReadStreamMuxConfig(
             tmpBs = *bs;
             FDKsyncCache(&tmpBs);
             tmpBs.hBitBuf.ValidBits = ascLen;
-            
+
             /* Read ASC */
             if ((ErrorStatus = AudioSpecificConfig_Parse(&pAsc[TPDEC_TRACKINDEX(prog,lay)], &tmpBs, 1, pTpDecCallbacks))) {
               return (ErrorStatus);
@@ -363,7 +362,7 @@ TRANSPORTDEC_ERROR CLatmDemux_ReadStreamMuxConfig(
 TRANSPORTDEC_ERROR CLatmDemux_ReadPayloadLengthInfo(HANDLE_FDK_BITSTREAM bs, CLatmDemux *pLatmDemux)
 {
   TRANSPORTDEC_ERROR ErrorStatus = TRANSPORTDEC_OK;
-  int totalPayloadBits = 0;
+  unsigned int totalPayloadBits = 0;
 
   if( pLatmDemux->m_allStreamsSameTimeFraming == 1 ) {
     for (UINT prog=0; prog<pLatmDemux->m_numProgram; prog++ ) {

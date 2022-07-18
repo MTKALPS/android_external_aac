@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -225,7 +224,9 @@ struct AAC_DECODER_INSTANCE {
 
   FIXP_DBL     extGain[1];                           /*!< Gain that must be applied to the output signal. */
   UINT         extGainDelay;                         /*!< Delay that must be accounted for extGain. */
-
+#ifdef MTK_AOSP_ENHANCEMENT
+  UCHAR             seekDrop;                       /*!< do concealment for first frame after seeking */
+#endif
 };
 
 
@@ -316,6 +317,7 @@ LINKSPEC_H AAC_DECODER_ERROR CAacDecoder_DecodeFrame(
 /* Destroy aac decoder */
 LINKSPEC_H void CAacDecoder_Close ( HANDLE_AACDECODER self );
 
+LINKSPEC_H void CAacDecoder_Reset(HANDLE_AACDECODER self);
 /* get streaminfo handle from decoder */
 LINKSPEC_H CStreamInfo* CAacDecoder_GetStreamInfo ( HANDLE_AACDECODER self );
 

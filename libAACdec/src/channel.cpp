@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -271,6 +270,10 @@ AAC_DECODER_ERROR CChannelElement_Read(HANDLE_FDK_BITSTREAM hBs,
   ch = 0;
   decision_bit = 0;
   do {
+#if defined(MTK_AOSP_ENHANCEMENT) && defined(DBGOUT_LSI_DPRINTF)
+    LSIdebug_display_channel_element_usedBtis(list->id[i], hBs->hBitBuf.usedBits);
+#endif
+
     switch (list->id[i]) {
     case element_instance_tag:
       pAacDecoderChannelInfo[0]->ElementInstanceTag = FDKreadBits(hBs, 4);
@@ -306,7 +309,7 @@ AAC_DECODER_ERROR CChannelElement_Read(HANDLE_FDK_BITSTREAM hBs,
     case ms:
       if ( CJointStereo_Read(
               hBs,
-             &pAacDecoderChannelInfo[0]->pComData->jointStereoData, 
+             &pAacDecoderChannelInfo[0]->pComData->jointStereoData,
               GetWindowGroups(&pAacDecoderChannelInfo[0]->icsInfo),
               GetScaleMaxFactorBandsTransmitted(&pAacDecoderChannelInfo[0]->icsInfo,
                                                 &pAacDecoderChannelInfo[1]->icsInfo),
@@ -330,7 +333,7 @@ AAC_DECODER_ERROR CChannelElement_Read(HANDLE_FDK_BITSTREAM hBs,
 
     case scale_factor_data:
       if (flags & AC_ER_RVLC) {
-        /* read RVLC data from bitstream (error sens. cat. 1) */ 
+        /* read RVLC data from bitstream (error sens. cat. 1) */
         CRvlc_Read(pAacDecoderChannelInfo[ch], hBs);
       }
       else
@@ -360,7 +363,7 @@ AAC_DECODER_ERROR CChannelElement_Read(HANDLE_FDK_BITSTREAM hBs,
 
     case gain_control_data:
       break;
-    
+
     case gain_control_data_present:
       if (FDKreadBits(hBs, 1)) {
         error = AAC_DEC_UNSUPPORTED_GAIN_CONTROL_DATA;

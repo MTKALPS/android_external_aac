@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -940,7 +939,9 @@ SBR_ERROR sbrDecoder_Parse(
 
   int  stereo;
   int  fDoDecodeSbrData = 1;
-
+#ifdef MTK_AOSP_ENHANCEMENT
+  int  fgContinue = 0;
+#endif
   int lastSlot, lastHdrSlot = 0, thisHdrSlot;
 
   /* Remember start position of  SBR element */
@@ -950,7 +951,7 @@ SBR_ERROR sbrDecoder_Parse(
   if ( self == NULL || self->pSbrElement[elementIndex] == NULL ) {
     errorStatus = SBRDEC_NOT_INITIALIZED;
     goto bail;
-  } 
+  }
 
   hSbrElement = self->pSbrElement[elementIndex];
 
@@ -1046,7 +1047,7 @@ SBR_ERROR sbrDecoder_Parse(
             hSbrHeader,
             headerStatus,
             pSbrChannel,
-            hSbrElement->nChannels 
+            hSbrElement->nChannels
             );
 
       if (errorStatus == SBRDEC_OK) {
@@ -1122,6 +1123,10 @@ SBR_ERROR sbrDecoder_Parse(
       /* sanity check of remaining bits */
       if (valBits < 0) {
         fDoDecodeSbrData = 0;
+
+#ifdef MTK_AOSP_ENHANCEMENT
+		fgContinue = 1;
+#endif
       } else {
         switch (self->coreCodec) {
         case AOT_SBR:
@@ -1151,7 +1156,10 @@ SBR_ERROR sbrDecoder_Parse(
   if (!fDoDecodeSbrData) {
     /* Set error flag for this slot to trigger concealment */
     self->pSbrElement[elementIndex]->frameErrorFlag[hSbrElement->useFrameSlot] = 1;
-    errorStatus = SBRDEC_PARSE_ERROR;
+#ifdef MTK_AOSP_ENHANCEMENT
+	if(!fgContinue)
+#endif
+	errorStatus = SBRDEC_PARSE_ERROR;
   } else {
     /* Everything seems to be ok so clear the error flag */
     self->pSbrElement[elementIndex]->frameErrorFlag[hSbrElement->useFrameSlot] = 0;
@@ -1188,7 +1196,7 @@ bail:
  * \param self SBR decoder handle
  * \param timeData pointer to output buffer
  * \param interleaved flag indicating interleaved channel output
- * \param channelMapping pointer to UCHAR array where next 2 channel offsets are stored. 
+ * \param channelMapping pointer to UCHAR array where next 2 channel offsets are stored.
  * \param elementIndex enumerating index of the SBR element to render.
  * \param numInChannels number of channels from core coder (reading stride).
  * \param numOutChannels pointer to a location to return number of output channels.
@@ -1377,7 +1385,7 @@ sbrDecoder_DecodeElement (
     h_ps_d->psDecodedPrv = (self->flags & SBRDEC_PS_DECODED) ? 1 : 0 ;
   }
 
-  if ( psPossible 
+  if ( psPossible
     )
   {
     FDK_ASSERT(strideOut > 1);
@@ -1390,7 +1398,7 @@ sbrDecoder_DecodeElement (
         FDK_ASSERT(strideOut == 2);
 
         ptr = timeData;
-        for (i = codecFrameSize; i--; ) 
+        for (i = codecFrameSize; i--; )
         {
           INT_PCM tmp; /* This temporal variable is required because some compilers can't do *ptr++ = *ptr++ correctly. */
           tmp = *ptr++; *ptr++ = tmp;

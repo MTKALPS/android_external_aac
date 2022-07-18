@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -185,7 +184,9 @@ TRANSPORTDEC_ERROR adtsRead_DecodeHeader(
 #endif
 
   valBits = FDKgetValidBits(hBs);
-
+#ifdef MTK_AOSP_ENHANCEMENT
+  if (valBits <= ADTS_HEADERLENGTH) return TRANSPORTDEC_NOT_ENOUGH_BITS;
+#endif
   /* adts_fixed_header */
   bs.mpeg_id           = FDKreadBits(hBs, Adts_Length_Id);
   bs.layer             = FDKreadBits(hBs, Adts_Length_Layer);
@@ -311,7 +312,7 @@ TRANSPORTDEC_ERROR adtsRead_DecodeHeader(
   {
     int pceBits = 0;
     UINT alignAnchor = FDKgetValidBits(hBs);
-    
+
     if (FDKreadBits(hBs,3) == ID_PCE) {
       /* Got luck! Parse the PCE */
       int crcReg;

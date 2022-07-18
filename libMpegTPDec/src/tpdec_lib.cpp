@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -196,10 +195,13 @@ HANDLE_TRANSPORTDEC transportDec_Open( const TRANSPORT_TYPE transportFmt, const 
   }
 
   if (hInput != NULL) {
+  #ifndef FEED_RAW_BUFFER_TO_INTERNAL
     /* Create bitstream */
     if ( TT_IS_PACKET(transportFmt) ) {
       hInput->bsBuffer = NULL;
-    } else {
+    } else
+#endif
+	{
       hInput->bsBuffer = GetRam_TransportDecoderBuffer(0);
       if (hInput->bsBuffer == NULL) {
           transportDec_Close( &hInput );
@@ -313,7 +315,7 @@ TRANSPORTDEC_ERROR transportDec_FillData(
 
   /* set bitbuffer shortcut */
   hBs = &hTp->bitStream[layer];
-
+#ifndef FEED_RAW_BUFFER_TO_INTERNAL
   if ( TT_IS_PACKET(hTp->transportFmt) ) {
     if (hTp->numberOfRawDataBlocks == 0) {
     /* For packet based transport, pass input buffer to bitbuffer without copying the data.
@@ -323,7 +325,9 @@ TRANSPORTDEC_ERROR transportDec_FillData(
     FDKinitBitStream(hBs, pBuffer, 0x10000, (*pBytesValid)<<3, BS_READER);
     *pBytesValid = 0;
     }
-  } else {
+  } else
+#endif
+  {
     /* ... else feed bitbuffer with new stream data (append). */
     if (hTp->numberOfRawDataBlocks <= 0) {
       FDKfeedBuffer (hBs, pBuffer, bufferSize, pBytesValid) ;
@@ -451,7 +455,7 @@ TRANSPORTDEC_ERROR transportDec_AdjustEndOfAccessUnit(HANDLE_TRANSPORTDEC hTp)
  * \param bitsAvail the amount of available bits at the end of the first frame to be decoded.
  * \return error code
  */
-static 
+static
 TRANSPORTDEC_ERROR additionalHoldOffNeeded(
         HANDLE_TRANSPORTDEC hTp,
         INT                 bufferFullness,
@@ -606,7 +610,7 @@ static TRANSPORTDEC_ERROR transportDec_readHeader(
         } else {
           hTp->numberOfRawDataBlocks = CLatmDemux_GetNrOfSubFrames(&hTp->parser.latm);
           if (hTp->transportFmt == TT_MP4_LOAS) {
-            syncLayerFrameBits -= startPos - FDKgetValidBits(hBs) - (13);            
+            syncLayerFrameBits -= startPos - FDKgetValidBits(hBs) - (13);
           }
         }
       } else {
@@ -859,7 +863,7 @@ TRANSPORTDEC_ERROR synchronization(
     headerBits = headerBitsFirstFrame;
     err = errFirstFrame;
     numFramesTraversed = 0;
-  } 
+  }
 
   /* Additional burst data mode buffer fullness check. */
   if ( !(hTp->flags & (TPDEC_LOST_FRAMES_PENDING|TPDEC_IGNORE_BUFFERFULLNESS|TPDEC_SYNCOK)) && err == TRANSPORTDEC_OK) {
@@ -868,7 +872,7 @@ TRANSPORTDEC_ERROR synchronization(
       hTp->holdOffFrames++;
     }
   }
-  
+
   /* Rewind for retry because of not enough bits */
   if (err == TRANSPORTDEC_NOT_ENOUGH_BITS) {
     FDKpushBack(hBs, headerBits);
@@ -996,11 +1000,11 @@ TRANSPORTDEC_ERROR transportDec_readStream ( HANDLE_TRANSPORTDEC hTp, const UINT
           if ( (denom - hTp->remainder) >= hTp->remainder ) {
             nAU--;
           }
-            
+
           if (nAU < 0) {
             /* There was one frame too much concealed, so unfortunately we will have to skip one good frame. */
             transportDec_EndAccessUnit(hTp);
-            error = synchronization(hTp, &headerBits);             
+            error = synchronization(hTp, &headerBits);
             nAU = -1;
 #ifdef DEBUG
             FDKprintf("ERROR: Bufferfullness accounting failed. remainder=%d, nAU=%d\n", hTp->remainder, nAU);
@@ -1083,10 +1087,17 @@ TRANSPORTDEC_ERROR transportDec_ReadAccessUnit( const HANDLE_TRANSPORTDEC hTp, c
       break;
 
     case TT_MP4_RAW:
-      /* One Access Unit was filled into buffer.
+// Current OMX design, the buffer unit isn't One Access Unit, so we set length = -1 to
+// skip au length check in CAacDecoder_DecodeFrame()
+#ifdef MTK_AOSP_ENHANCEMENT
+      hTp->auLength[layer] = -1;
+#else
+
+	  /* One Access Unit was filled into buffer.
          So get the length out of the buffer. */
       hTp->auLength[layer] = FDKgetValidBits(hBs);
-      hTp->flags |= TPDEC_SYNCOK;
+#endif
+	  hTp->flags |= TPDEC_SYNCOK;
       break;
 
     case TT_MP4_LATM_MCP0:
@@ -1313,7 +1324,7 @@ TRANSPORTDEC_ERROR transportDec_CrcCheck(HANDLE_TRANSPORTDEC pTp)
     if ( (pTp->parser.adts.bs.num_raw_blocks > 0) && (pTp->parser.adts.bs.protection_absent == 0) )
     {
       HANDLE_FDK_BITSTREAM hBs = &pTp->bitStream[0];
-      
+
       transportDec_AdjustEndOfAccessUnit(pTp);
     }
     return adtsRead_CrcCheck(&pTp->parser.adts);

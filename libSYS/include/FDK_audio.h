@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -550,6 +549,12 @@ typedef enum {
                                        (lev1<<16 & 0x00ff0000) | \
                                        (lev2<<8  & 0x0000ff00))
 
+
+
+#define LIB_VERSION4(lev0, lev1, lev2, lev3) ((lev0<<24 & 0xff000000) | \
+                                              (lev1<<16 & 0x00ff0000) | \
+                                              (lev2<<8  & 0x0000ff00) | \
+                                              (lev3 & 0x000000ff))
 /**
  *  Build text string of version.
  */

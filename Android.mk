@@ -42,6 +42,11 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS := -DANDROID
 LOCAL_CFLAGS += -Wno-sequence-point -Wno-extra
 
+ifeq ($(strip $(MTK_USE_ANDROID_MM_DEFAULT_CODE)),no)
+LOCAL_CFLAGS += -DMTK_AOSP_ENHANCEMENT
+endif
+
+
 LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/libAACdec/include \
         $(LOCAL_PATH)/libAACenc/include \
@@ -52,6 +57,8 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/libMpegTPEnc/include \
         $(LOCAL_PATH)/libSBRdec/include \
         $(LOCAL_PATH)/libSBRenc/include
+
+LOCAL_ARM_MODE := arm
 
 LOCAL_MODULE:= libFraunhoferAAC
 

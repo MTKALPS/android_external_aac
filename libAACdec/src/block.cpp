@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -105,6 +104,8 @@ amm-info@iis.fraunhofer.de
 #include "arm/block_arm.cpp"
 #endif
 
+
+#define MAX_SFB_LONG  64
 /*!
   \brief Read escape sequence of codeword
 
@@ -342,7 +343,7 @@ AAC_DECODER_ERROR CBlock_ReadSectionData(HANDLE_FDK_BITSTREAM bs,
       /* Check spectral line limits */
       if (IsLongBlock( &(pAacDecoderChannelInfo->icsInfo) ))
       {
-        if (top > 64) {
+        if (top > MAX_SFB_LONG) {
           return AAC_DEC_DECODE_FRAME_ERROR;
         }
       } else { /* short block */
@@ -353,7 +354,9 @@ AAC_DECODER_ERROR CBlock_ReadSectionData(HANDLE_FDK_BITSTREAM bs,
 
       /* Check if decoded codebook index is feasible */
       if ( (sect_cb == BOOKSCL)
-       || ( (sect_cb == INTENSITY_HCB || sect_cb == INTENSITY_HCB2) && pAacDecoderChannelInfo->pDynData->RawDataInfo.CommonWindow == 0)
+#ifndef MTK_AOSP_ENHANCEMENT
+	  || ( (sect_cb == INTENSITY_HCB || sect_cb == INTENSITY_HCB2) && pAacDecoderChannelInfo->pDynData->RawDataInfo.CommonWindow == 0)
+#endif
          )
       {
         return AAC_DEC_INVALID_CODE_BOOK;

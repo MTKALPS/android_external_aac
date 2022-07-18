@@ -1,4 +1,3 @@
-
 /* -----------------------------------------------------------------------------------------------------------
 Software License for The Fraunhofer FDK AAC Codec Library for Android
 
@@ -691,21 +690,21 @@ aacDecoder_ConfigRaw ( HANDLE_AACDECODER self,
  *                    The value is updated according to the amount of newly copied bytes.
  * \return            Error code.
  */
+#ifdef MTK_AOSP_ENHANCEMENT
+#define AACDEC_BYPASS   (1 << 31)/*!< Flag for aacDecoder_DecodeFrame(): Bypass signal processing, used for seek time table buildup */
+#endif
+
 LINKSPEC_H AAC_DECODER_ERROR
 aacDecoder_Fill ( HANDLE_AACDECODER  self,
                   UCHAR             *pBuffer[],
                   const UINT         bufferSize[],
                   UINT              *bytesValid );
 
-#define AACDEC_CONCEAL  1 /*!< Flag for aacDecoder_DecodeFrame(): Trigger the built-in error concealment module \
-                                 to generate a substitute signal for one lost frame. New input data will not be
-                                 considered. */
-#define AACDEC_FLUSH    2 /*!< Flag for aacDecoder_DecodeFrame(): Flush all filterbanks to get all delayed audio \
-                                 without having new input data. Thus new input data will not be considered.*/
-#define AACDEC_INTR     4 /*!< Flag for aacDecoder_DecodeFrame(): Signal an input bit stream data discontinuity. \
-                                 Resync any internals as necessary. */
-#define AACDEC_CLRHIST  8 /*!< Flag for aacDecoder_DecodeFrame(): Clear all signal delay lines and history buffers.\
-                                 CAUTION: This can cause discontinuities in the output signal. */
+#define AACDEC_CONCEAL  (1 << 0) /*!< Flag for aacDecoder_DecodeFrame(): do not consider new input data. Do concealment. */
+#define AACDEC_FLUSH    (1 << 1) /*!< Flag for aacDecoder_DecodeFrame(): Do not consider new input data. Flush filterbanks (output delayed audio). */
+#define AACDEC_INTR     (1 << 2) /*!< Flag for aacDecoder_DecodeFrame(): Signal an input bit stream data discontinuity. Resync any internals as necessary. */
+#define AACDEC_CLRHIST  (1 << 3) /*!< Flag for aacDecoder_DecodeFrame(): Clear all signal delay lines and history buffers.*/
+
 
 /**
  * \brief            Decode one audio frame
@@ -732,6 +731,7 @@ aacDecoder_DecodeFrame ( HANDLE_AACDECODER  self,
  */
 LINKSPEC_H void aacDecoder_Close ( HANDLE_AACDECODER self );
 
+LINKSPEC_H void aacDecoder_Reset ( HANDLE_AACDECODER self );
 /**
  * \brief       Get CStreamInfo handle from decoder.
  *
